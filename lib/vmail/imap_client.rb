@@ -232,14 +232,6 @@ module Vmail
       new_ids
     end
 
-    def update_message_list(new_ids)
-      new_emails = DRbObject.new_with_uri($drb_uri).update
-      return if new_emails.empty?
-
-      server_name = "VMAIL:#{ @username }"
-      system(%[vim --servername #{ server_name } --remote-expr 'UPDATE_MESSAGE_LIST("#{ new_emails }")'])
-    end
-
     def update
       prime_connection
       new_ids = check_for_new_messages 
@@ -530,6 +522,36 @@ EOF
       uri = DRb.uri
       puts "Starting gmail service at #{uri}"
       uri
+    end
+
+    private
+
+    # Copied from 1.9.3's Shellwords implementation for 1.8.7 compatibility.
+    def shellescape(str)
+      # An empty argument will be skipped, so return empty quotes.
+      return "''" if str.empty?
+
+      str = str.dup
+
+      # Process as a single byte sequence because not all shell
+      # implementations are multibyte aware.
+      str.gsub!(/([^A-Za-z0-9_\-.,:\/@\n])/n, "\\\\\\1")
+
+      # A LF cannot be escaped with a backslash because a backslash + LF
+      # combo is regarded as line continuation and simply ignored.
+      str.gsub!(/\n/, "'\n'")
+
+      return str
+    end
+
+    def update_message_list(new_ids)
+      new_subjects = DRbObject.new_with_uri($drb_uri).update
+      return if new_subjects.empty?
+      escaped_subjects = shellescape(new_subjects)
+
+      server_name = "VMAIL:#{ @username }"
+      log %[vim --servername #{ server_name } --remote-expr 'UPDATE_MESSAGE_LIST("#{ escaped_subjects }")']
+      system(%[vim --servername #{ server_name } --remote-expr 'UPDATE_MESSAGE_LIST("#{ escaped_subjects }")'])
     end
   end
 end
