@@ -5,7 +5,7 @@ module Vmail
 
 
     # This is a second IMAP client operating in a separate process
- 
+
     def start_polling
       n = [`which notify-send`.chomp, `which growlnotify`.chomp].detect {|c| c != ''}
       if n
@@ -20,7 +20,7 @@ module Vmail
         log "No notification tool detected. INBOX polling aborted."
         return
       end
-     
+
       sleep 30
       log "INBOX POLLER: started polling"
       @mailboxes.unshift "INBOX"
@@ -34,10 +34,10 @@ module Vmail
     end
 
     def update
-      new_ids = check_for_new_messages 
+      new_ids = check_for_new_messages
       if !new_ids.empty?
         @ids = @ids + new_ids
-	# remove '<>' from email. libnotify can't print '<' 
+	# remove '<>' from email. libnotify can't print '<'
         res = uncached_headers(new_ids).map {|m| m[:sender] }.join(", ").tr('<>','')
         @notifier.call "Vmail: new email", "from " + res
       end
@@ -48,10 +48,10 @@ module Vmail
     # doesn't try to access Sequel / sqlite3
     def uncached_headers(id_set)
       log "Fetching headers for #{id_set.size} messages"
-      results = reconnect_if_necessary do 
+      results = reconnect_if_necessary do
         @imap.fetch(id_set, ["FLAGS", "ENVELOPE", "RFC822.SIZE", "UID"])
       end
-      results.reverse.map do |x| 
+      results.reverse.map do |x|
         envelope = x.attr["ENVELOPE"]
         message_id = envelope.message_id
         subject = Mail::Encodings.unquote_and_convert_to((envelope.subject || ''), 'UTF-8')
